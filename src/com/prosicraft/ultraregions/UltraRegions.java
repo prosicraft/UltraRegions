@@ -965,12 +965,12 @@ public class UltraRegions extends JavaPlugin
 	{
 		for( URegion tr : autoassign )
 		{
-			if( tr.owner.equalsIgnoreCase( to.getName() ) )
+			if( tr.owner.equalsIgnoreCase( to.getName() ) && tr.sel.getWorld().getName().equalsIgnoreCase( to.getWorld().getName() ) )
 			{
 				to.sendMessage( ChatColor.RED + "Du hast bereits ein Grundstueck. Bitte einen Support anfragen wenn du ein Zweites wuenscht." );
 				return true;
 			}
-		}
+		}				
 		for( URegion ur : autoassign )
 		{
 			if( ur.owner.equalsIgnoreCase( "noone" ) )
@@ -986,7 +986,7 @@ public class UltraRegions extends JavaPlugin
 				save();
 				return true;
 			}
-		}
+		}				
 		return false;
 	}
 }
