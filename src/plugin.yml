@@ -1,0 +1,20 @@
+## ultraregion plugin file
+
+name: UltraRegions
+version: v2013c
+description: UltraRegions - Plot system with gamemode support
+author: stereophon23
+website: http://www.mineandcraft.de
+softdepend: [WorldEdit]
+
+main: com.prosicraft.ultraregions.UltraRegions
+
+commands:
+    ultraregions:
+        description: Universal Region command
+        usage: /<command> <create|delete|gamemode|greet|farewell|claim>        
+        aliases: [ur, region, ultraregion]
+    ultraplots:
+        description: Generates plots
+        usage: /<command> <gen|claim|gamemode|define|unclaim|delete> <<w><h><pw><ph><sw><pp>|[player]>
+        aliases: [plot, pl, p]
