@@ -8,6 +8,7 @@ import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import java.util.HashMap;
 import java.util.Map;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,7 +17,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -53,10 +57,13 @@ public class URListener implements Listener
 		savecount++;
 	}
 
+	/**
+	 * Try to hook into WorldEdit here
+	 * @param event
+	 */
 	@EventHandler( priority = EventPriority.NORMAL )
 	public void onPluginEnable( PluginEnableEvent event )
 	{
-
 		Plugin plug = event.getPlugin();
 
 		if( plug != null && plug.getDescription().getName().equalsIgnoreCase( "WorldEdit" ) )
@@ -81,116 +88,118 @@ public class URListener implements Listener
 
 			}
 		}
-
 	}
 
-	@EventHandler( priority = EventPriority.LOWEST )
-	public void onBlockPlace( BlockPlaceEvent e )
+	/**
+	 * Check if event is permitted
+	 * @param p The Player invoking this event
+	 * @param l The location of modified entity
+	 * @return true if player is permitted to do so
+	 */
+	public boolean isPermitted( Player p, Location l )
 	{
 		boolean blockInRegion = false;
 		for( URegion reg : ur.regions )
 		{
-			if( !reg.sel.contains( e.getBlock().getLocation() ) )
+			if( !reg.sel.contains( l ) )
 				continue;
 			blockInRegion = true;
-			if( !reg.owner.equalsIgnoreCase( e.getPlayer().getName() ) && !reg.owner.isEmpty() )
+			if( !reg.owner.equalsIgnoreCase( p.getName() ) && !reg.owner.isEmpty() )
 			{
-				if( !e.getPlayer().hasPermission( "ultraregions.build.others" ) )
-					e.setCancelled( true );
+				if( !p.hasPermission( "ultraregions.build.others" ) )
+					return false;
 			}
 		}
 		for( URegion reg : ur.autoassign )
 		{
-			if( !reg.sel.contains( e.getBlock().getLocation() ) )
+			if( !reg.sel.contains( l ) )
 				continue;
 			blockInRegion = true;
-			if( !reg.owner.equalsIgnoreCase( e.getPlayer().getName() ) && !reg.owner.isEmpty() )
+			if( !reg.owner.equalsIgnoreCase( p.getName() ) && !reg.owner.isEmpty() )
 			{
-				if( !e.getPlayer().hasPermission( "ultraregions.build.others" ) )
-					e.setCancelled( true );
+				if( !p.hasPermission( "ultraregions.build.others" ) )
+					return false;
 			}
 		}
 		if( !blockInRegion )
 		{
-			if( !e.getPlayer().hasPermission( "ultraregions.build.everywhere" ) )
+			if( !p.hasPermission( "ultraregions.build.everywhere" ) )
+				return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Handle Block Placing Event
+	 * @param e the event
+	 */
+	@EventHandler( priority = EventPriority.LOWEST )
+	public void onBlockPlace( BlockPlaceEvent e )
+	{
+		if( !isPermitted( e.getPlayer(), e.getBlock().getLocation() ) )
+			e.setCancelled( true );
+	}
+
+	/**
+	 * Handle Block Breaking event
+	 * @param e
+	 */
+	@EventHandler( priority = EventPriority.LOWEST )
+	public void onBlockBreak( BlockBreakEvent e )
+	{
+		if( !isPermitted( e.getPlayer(), e.getBlock().getLocation() ) )
+			e.setCancelled( true );
+	}
+
+	/**
+	 * Handle Hanging (Painting and stuff) placment event
+	 * @param e
+	 */
+	@EventHandler( priority = EventPriority.LOWEST )
+	public void onHangingPlace( HangingPlaceEvent e )
+	{
+		if( e.getPlayer().getType() == EntityType.PLAYER )
+		{
+			if( !isPermitted( e.getPlayer(), e.getBlock().getLocation() ) )
 				e.setCancelled( true );
 		}
 	}
 
+	/**
+	 * Handle Hanging (Painting and stuff) breaking event
+	 * @param e
+	 */
 	@EventHandler( priority = EventPriority.LOWEST )
 	public void onHangingBreak( HangingBreakByEntityEvent e )
 	{
 		if( e.getRemover().getType() == EntityType.PLAYER )
 		{
-			Player executingPlayer = (Player)e.getRemover();
-			executingPlayer.sendMessage( "BreakHanging Event for Hanging" );
-
-			boolean blockInRegion = false;
-			for( URegion reg : ur.regions )
-			{
-				if( !reg.sel.contains( e.getEntity().getLocation() ) )
-				{
-					continue;
-				}
-				blockInRegion = true;
-				if( !reg.owner.equalsIgnoreCase( executingPlayer.getName() ) && !reg.owner.isEmpty() )
-				{
-					if( !executingPlayer.hasPermission( "ultraregions.build.others" ) )
-					{
-						e.setCancelled( true );
-					}
-				}
-			}
-
-			for( URegion reg : ur.autoassign )
-			{
-				if( !reg.sel.contains( e.getEntity().getLocation() ) )
-					continue;
-				blockInRegion = true;
-				if( !reg.owner.equalsIgnoreCase( executingPlayer.getName() ) && !reg.owner.isEmpty() )
-				{
-					if( !executingPlayer.hasPermission( "ultraregions.build.others" ) )
-						e.setCancelled( true );
-				}
-			}
-			if( !blockInRegion )
-			{
-				if( !executingPlayer.hasPermission( "ultraregions.build.everywhere" ) )
-					e.setCancelled( true );
-			}
+			if( !isPermitted( (Player)e.getRemover(), e.getEntity().getLocation() ) )
+				e.setCancelled( true );
 		}
 	}
 
+	/**
+	 * Handle bucket empty event
+	 */
 	@EventHandler( priority = EventPriority.LOWEST )
-	public void onBlockBreak( BlockBreakEvent e )
+	public void onPlayerBucketEmpty( PlayerBucketEmptyEvent e )
 	{
-		boolean blockInRegion = false;
+		if( !isPermitted( e.getPlayer(), e.getBlockClicked().getLocation() ) )
+			e.setCancelled( true );
+	}
 
-		for( URegion reg : ur.regions )
+	/**
+	 * Handle change of item-frames
+	 * @param e
+	 */
+	@EventHandler( priority = EventPriority.LOWEST )
+	public void onPlayerInteraction( PlayerInteractEntityEvent e )
+	{
+		if( e.getRightClicked().getType() == EntityType.ITEM_FRAME )
 		{
-			if( !reg.sel.contains( e.getBlock().getLocation() ) )
-				continue;
-			blockInRegion = true;
-			if( !reg.owner.equalsIgnoreCase( e.getPlayer().getName() ) && !reg.owner.isEmpty() )
-			{
-				if( !e.getPlayer().hasPermission( "ultraregions.build.others" ) )
-					e.setCancelled( true );
-			}
-		}
-		for( URegion reg : ur.autoassign )
-		{
-			if( !reg.sel.contains( e.getBlock().getLocation() ) )
-				continue;
-			blockInRegion = true;
-			if( !reg.owner.equalsIgnoreCase( e.getPlayer().getName() ) && !reg.owner.isEmpty() )
-			{
-				if( !e.getPlayer().hasPermission( "ultraregions.build.others" ) )
-					e.setCancelled( true );
-			}
-		}
-		if( !blockInRegion )
-		{
-			if( !e.getPlayer().hasPermission( "ultraregions.build.everywhere" ) )
+			if( !isPermitted( (Player)e.getPlayer(), e.getRightClicked().getLocation() ) )
 				e.setCancelled( true );
 		}
 	}
