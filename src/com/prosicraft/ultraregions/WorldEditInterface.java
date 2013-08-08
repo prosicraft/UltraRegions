@@ -79,6 +79,11 @@ public class WorldEditInterface
 				p.sendMessage( ChatColor.DARK_GRAY + "[UR] " + ChatColor.YELLOW + "Connection to worldedit is not up! (boot error)" );
 				return false;
 			}
+			else if( !worldedit.isEnabled() )
+			{
+				p.sendMessage( ChatColor.RED + "WorldEdit is not enabled!" );
+				return false;
+			}
 			else if( worldedit.getSession( p ) == null )
 			{
 				p.sendMessage( ChatColor.DARK_GRAY + "[UR] " + ChatColor.YELLOW + "Connection to worldedit is not up! (Session error)" );

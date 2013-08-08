@@ -1,6 +1,5 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * UltraRegions Security Listener
  */
 package com.prosicraft.ultraregions;
 
@@ -9,12 +8,14 @@ import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import java.util.HashMap;
 import java.util.Map;
 import org.bukkit.GameMode;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -117,9 +118,54 @@ public class URListener implements Listener
 	}
 
 	@EventHandler( priority = EventPriority.LOWEST )
+	public void onHangingBreak( HangingBreakByEntityEvent e )
+	{
+		if( e.getRemover().getType() == EntityType.PLAYER )
+		{
+			Player executingPlayer = (Player)e.getRemover();
+			executingPlayer.sendMessage( "BreakHanging Event for Hanging" );
+
+			boolean blockInRegion = false;
+			for( URegion reg : ur.regions )
+			{
+				if( !reg.sel.contains( e.getEntity().getLocation() ) )
+				{
+					continue;
+				}
+				blockInRegion = true;
+				if( !reg.owner.equalsIgnoreCase( executingPlayer.getName() ) && !reg.owner.isEmpty() )
+				{
+					if( !executingPlayer.hasPermission( "ultraregions.build.others" ) )
+					{
+						e.setCancelled( true );
+					}
+				}
+			}
+
+			for( URegion reg : ur.autoassign )
+			{
+				if( !reg.sel.contains( e.getEntity().getLocation() ) )
+					continue;
+				blockInRegion = true;
+				if( !reg.owner.equalsIgnoreCase( executingPlayer.getName() ) && !reg.owner.isEmpty() )
+				{
+					if( !executingPlayer.hasPermission( "ultraregions.build.others" ) )
+						e.setCancelled( true );
+				}
+			}
+			if( !blockInRegion )
+			{
+				if( !executingPlayer.hasPermission( "ultraregions.build.everywhere" ) )
+					e.setCancelled( true );
+			}
+		}
+	}
+
+	@EventHandler( priority = EventPriority.LOWEST )
 	public void onBlockBreak( BlockBreakEvent e )
 	{
 		boolean blockInRegion = false;
+
 		for( URegion reg : ur.regions )
 		{
 			if( !reg.sel.contains( e.getBlock().getLocation() ) )
