@@ -295,10 +295,10 @@ public class UltraRegions extends JavaPlugin
 			{
 				if( we == null )
 				{
+					MLog.w( "WorldEdited not hooked. Try to hook now..." );
 					tryHookWorldEdit();
 				}
-				else
-					MLog.w( "WorldEdited not hooked." );
+
 				if( args.length == 0 )
 				{
 					sendHelp( p );
@@ -311,6 +311,31 @@ public class UltraRegions extends JavaPlugin
 						p.sendMessage( ChatColor.GRAY + "Avaiable UltraRegions:" );
 						for( URegion reg : regions )
 							p.sendMessage( ChatColor.GOLD + reg.name + ChatColor.GRAY + " with gamemode: " + ChatColor.AQUA + ( reg.gamemode ? "CREATIVE" : "SURVIVAL" ) );
+						return true;
+					}
+					else if( args[0].equalsIgnoreCase( "reload" ) )
+					{
+						if( !p.hasPermission( "ultraregions.reload" ) )
+						{
+							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+							return true;
+						}
+						load();
+						MLog.s( "Reloaded UR Configuration" );
+						p.sendMessage( ChatColor.GREEN + "Reloaded UR Configuration!" );
+						return true;
+					}
+					else if( args[0].equalsIgnoreCase( "config") )
+					{
+						if( !p.hasPermission( "ultraregions.config" ) )
+						{
+							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+							return true;
+						}
+
+						String nodeArg = args[1];
+						p.sendMessage( ChatColor.DARK_GRAY + "Value of node '" + ChatColor.GRAY + nodeArg + ChatColor.DARK_GRAY + "': " + ChatColor.AQUA
+							+ config.getValueAsString( nodeArg ) );
 						return true;
 					}
 				}
@@ -390,12 +415,53 @@ public class UltraRegions extends JavaPlugin
 							if( world.getName().equalsIgnoreCase( p.getWorld().getName() ) )
 							{
 								world.setGameMode( gm );
-								save();
 								break;
 							}
 						}
+						save();
 						p.sendMessage( ChatColor.DARK_GRAY + "Set gamemode of world " + ChatColor.AQUA + p.getWorld().getName() +
 							ChatColor.DARK_GRAY + " to " + ChatColor.GREEN + args[1] );
+						return true;
+					}
+					else if( args[0].equalsIgnoreCase( "config" ) )
+					{
+						if( !p.hasPermission( "ultraregions.config" ) )
+						{
+							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+							return true;
+						}
+
+						String nodeArg = args[0];
+						String valueArg = args[1];
+
+						try
+						{
+							int val = Integer.parseInt( valueArg );
+							config.set( nodeArg, val );
+							config.save();
+							p.sendMessage( "Set digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+						}
+						catch( NumberFormatException ex )
+						{
+							if( valueArg.equalsIgnoreCase( "false" ) )
+							{
+								config.set( nodeArg, false );
+								config.save();
+								p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+							}
+							else if( valueArg.equalsIgnoreCase( "true" ) )
+							{
+								config.set( nodeArg, true );
+								config.save();
+								p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+							}
+							else
+							{
+								config.set( nodeArg, valueArg );
+								config.save();
+								p.sendMessage( "Set non-digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+							}
+						}
 						return true;
 					}
 				}

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,13 +21,47 @@ import org.bukkit.configuration.file.FileConfiguration;
 public class MConfiguration
 {
 
+	public enum DataType
+	{
+
+		DATATYPE_STRING,
+		DATATYPE_INTEGER,
+		DATATYPE_LIST_STRING,
+		DATATYPE_LIST_INTEGER,
+		DATATYPE_BOOLEAN
+	}
 	private FileConfiguration fc1 = null;
 	private File f1 = null;
+	private Map<String, DataType> dt = null;
 
 	public MConfiguration( FileConfiguration fc, File f )
 	{
 		this.fc1 = fc;
 		this.f1 = f;
+	}
+
+	public MConfiguration( FileConfiguration fc, File f, Map<String, DataType> dataTypeTable )
+	{
+		this.fc1 = fc;
+		this.f1 = f;
+		this.dt = dataTypeTable;
+	}
+
+	public void setDataTypeTable( Map<String, DataType> dataTypeTable )
+	{
+		this.dt = dataTypeTable;
+	}
+
+	public Map<String, DataType> getDataTypeTable()
+	{
+		return this.dt;
+	}
+
+	public DataType getDataType( String node )
+	{
+		if( dt.containsKey( node ) )
+			return dt.get( node );
+		return DataType.DATATYPE_STRING;
 	}
 
 	public File getFile()
@@ -79,6 +114,24 @@ public class MConfiguration
 		return getString( path, "" );
 	}
 
+	public String getValueAsString( String path )
+	{
+		if( dt.containsKey( path ) )
+		{
+			if( dt.get( path ) == DataType.DATATYPE_BOOLEAN )
+				return String.valueOf( fc1.getBoolean( path ) );
+			else if( dt.get( path ) == DataType.DATATYPE_INTEGER )
+				return String.valueOf( fc1.getInt( path ) );
+			else if( dt.get( path ) == DataType.DATATYPE_LIST_STRING )
+				return String.valueOf( fc1.getStringList( path ) );
+			else if( dt.get( path ) == DataType.DATATYPE_LIST_INTEGER )
+				return String.valueOf( fc1.getIntegerList( path ) );
+			else
+				return "Unknown Data type '" + String.valueOf( dt.get( path ) ) + "'";
+		}
+		return "DataType for path '" + path + "' not set!";
+	}
+
 	public Set<String> getKeys( String path, boolean deep )
 	{
 		try
@@ -87,7 +140,7 @@ public class MConfiguration
 		}
 		catch( NullPointerException nex )
 		{
-			return new HashSet<String>();
+			return new HashSet<>();
 		}
 	}
 
