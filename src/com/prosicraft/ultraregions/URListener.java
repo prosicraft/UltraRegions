@@ -20,10 +20,10 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.Plugin;
 
@@ -45,20 +45,9 @@ public class URListener implements Listener
 		this.ur = prnt;
 	}
 
-	@EventHandler( priority = EventPriority.NORMAL )
-	public void onJoin( PlayerJoinEvent event )
-	{
-		if( !ur.notifications.containsKey( event.getPlayer().getName() ) )
-			ur.notifications.put( event.getPlayer().getName(), Boolean.TRUE );
-		if( savecount > 3 )
-		{
-			ur.save();
-		}
-		savecount++;
-	}
-
 	/**
 	 * Try to hook into WorldEdit here
+	 *
 	 * @param event
 	 */
 	@EventHandler( priority = EventPriority.NORMAL )
@@ -92,6 +81,7 @@ public class URListener implements Listener
 
 	/**
 	 * Check if event is permitted
+	 *
 	 * @param p The Player invoking this event
 	 * @param l The location of modified entity
 	 * @return true if player is permitted to do so
@@ -132,6 +122,7 @@ public class URListener implements Listener
 
 	/**
 	 * Handle Block Placing Event
+	 *
 	 * @param e the event
 	 */
 	@EventHandler( priority = EventPriority.LOWEST )
@@ -143,6 +134,7 @@ public class URListener implements Listener
 
 	/**
 	 * Handle Block Breaking event
+	 *
 	 * @param e
 	 */
 	@EventHandler( priority = EventPriority.LOWEST )
@@ -154,6 +146,7 @@ public class URListener implements Listener
 
 	/**
 	 * Handle Hanging (Painting and stuff) placment event
+	 *
 	 * @param e
 	 */
 	@EventHandler( priority = EventPriority.LOWEST )
@@ -168,6 +161,7 @@ public class URListener implements Listener
 
 	/**
 	 * Handle Hanging (Painting and stuff) breaking event
+	 *
 	 * @param e
 	 */
 	@EventHandler( priority = EventPriority.LOWEST )
@@ -175,7 +169,7 @@ public class URListener implements Listener
 	{
 		if( e.getRemover().getType() == EntityType.PLAYER )
 		{
-			if( !isPermitted( (Player)e.getRemover(), e.getEntity().getLocation() ) )
+			if( !isPermitted( ( Player ) e.getRemover(), e.getEntity().getLocation() ) )
 				e.setCancelled( true );
 		}
 	}
@@ -192,6 +186,7 @@ public class URListener implements Listener
 
 	/**
 	 * Handle change of item-frames
+	 *
 	 * @param e
 	 */
 	@EventHandler( priority = EventPriority.LOWEST )
@@ -199,126 +194,172 @@ public class URListener implements Listener
 	{
 		if( e.getRightClicked().getType() == EntityType.ITEM_FRAME )
 		{
-			if( !isPermitted( (Player)e.getPlayer(), e.getRightClicked().getLocation() ) )
+			if( !isPermitted( ( Player ) e.getPlayer(), e.getRightClicked().getLocation() ) )
 				e.setCancelled( true );
 		}
 	}
 
-	@EventHandler( priority = EventPriority.LOWEST )
+	@EventHandler( priority = EventPriority.LOW )
+	public void onPlayerJoin( PlayerJoinEvent event )
+	{
+		// print out notifications
+		if( !ur.notifications.containsKey( event.getPlayer().getName() ) )
+		{
+			ur.notifications.put( event.getPlayer().getName(), Boolean.TRUE );
+		}
+
+		// check current gamemode on rejoin
+		Player player = event.getPlayer();
+		if( !player.hasPermission( "ultraregions.keepgamemode" ) )
+		{
+			boolean handledGamemode = false;
+
+			// LOW PRIORITY
+			// check if player is in any region
+			for( URegion region : ur.regions )
+			{
+				if( region.sel.contains( player.getLocation() ) )
+				{
+					ur.setCreativeMode( player, region.gamemode );
+					handledGamemode = true;
+					break;
+				}
+			}
+
+			// HIGH PRIORITY
+			// .. check with autoassign regions
+			for( URegion autoAssignRegion : ur.autoassign )
+			{
+				if( autoAssignRegion.sel.contains( player.getLocation() ) )
+				{
+					ur.setCreativeMode( player, autoAssignRegion.gamemode );
+					handledGamemode = true;
+					break;
+				}
+			}
+
+			// if not in any region, assign world gamemode
+			if( !handledGamemode )
+			{
+				ur.setCreativeMode( player, ur.getWorldGameMode( player ) );
+			}
+		}
+	}
+
+	/**
+	 * Handle player movement
+	 *
+	 * @param event
+	 */
+	@EventHandler( priority = EventPriority.HIGHEST )
 	public void onPlayerMove( PlayerMoveEvent event )
 	{
+		Player player = event.getPlayer();
+		boolean ignoreGamemodeForPlayer = player.hasPermission( "ultraregions.keepgamemode" );
+		boolean worldModeValid = false;
+
+		// go through all normal regions
 		for( URegion reg : ur.regions )
 		{
-			if( reg.sel.contains( event.getTo() ) && !reg.sel.contains( event.getFrom() ) )
+			// Check if players switches between regions or region and world
+			if( reg.sel.contains( event.getTo() ) != reg.sel.contains( event.getFrom() ) )
 			{
-				if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-					event.getPlayer().sendMessage( MLog.real( reg.greet ) );
-				gmbackup.put( event.getPlayer(), event.getPlayer().getGameMode() );
-				if( reg.gamemode )
-					event.getPlayer().setGameMode( GameMode.CREATIVE );
+				// now evaluate the target position
+				if( reg.sel.contains( event.getTo() ) )
+				{
+					worldModeValid = true;
+					player.sendMessage( MLog.real( reg.greet ) );
+
+					if( !ignoreGamemodeForPlayer )
+						ur.setCreativeMode( player, reg.gamemode );
+				}
 				else
-					event.getPlayer().setGameMode( GameMode.SURVIVAL );
-			}
-			else if( !reg.sel.contains( event.getTo() ) && reg.sel.contains( event.getFrom() ) )
-			{
-				if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-					event.getPlayer().sendMessage( MLog.real( reg.farewell ) );
-				event.getPlayer().setGameMode( gmbackup.get( event.getPlayer() ) );
-				gmbackup.remove( event.getPlayer() );
+				{
+					player.sendMessage( MLog.real( reg.farewell ) );
+
+					if( !ignoreGamemodeForPlayer )
+						ur.setCreativeMode( player, ur.getWorldGameMode( player ) );
+					worldModeValid = true;
+				}
 			}
 			else if( reg.sel.contains( event.getTo() ) && reg.sel.contains( event.getFrom() ) )
 			{
-				if( gmbackup.get( event.getPlayer() ) == null )
+				// Prevent from hacking gamemode while walking on a region
+				if( !ignoreGamemodeForPlayer )
 				{
-					if( reg.gamemode )
-						event.getPlayer().setGameMode( GameMode.CREATIVE );
-					else
-						event.getPlayer().setGameMode( GameMode.SURVIVAL );
+					if( player.getGameMode() != ( ( reg.gamemode ) ? GameMode.CREATIVE : GameMode.SURVIVAL ) )
+					{
+						ur.setCreativeMode( player, reg.gamemode );
+					}
 				}
+				worldModeValid = true;
 			}
-			/*else if ( !reg.sel.contains(event.getTo()) && !reg.sel.contains(event.getFrom()) ) {      // Nothing in there
-			 if (gmbackup.containsKey(event.getPlayer())) {
-			 event.getPlayer().setGameMode(gmbackup.get(event.getPlayer()));
-			 gmbackup.remove(event.getPlayer());
-			 } else {
-			 if (parent.global.gamemode)
-			 event.getPlayer().setGameMode(GameMode.CREATIVE);
-			 else
-			 event.getPlayer().setGameMode(GameMode.SURVIVAL);
-			 }
-			 }*/
 		}
-		boolean inRegion = false;
+
+		// go through all auto assign regions
 		for( URegion reg : ur.autoassign )
 		{
+			boolean showNotifications = ( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) );
+			boolean isOwner = ( reg.owner.equalsIgnoreCase( event.getPlayer().getName() ) || reg.owner.equalsIgnoreCase( "noone" ) );
 
-			if( reg.sel.contains( event.getTo() ) && !reg.sel.contains( event.getFrom() ) ) // Enter
+			if( reg.sel.contains( event.getTo() ) != reg.sel.contains( event.getFrom() ) )
 			{
-				inRegion = true;
-				if( reg.owner.equalsIgnoreCase( event.getPlayer().getName() ) || reg.owner.equalsIgnoreCase( "noone" ) )
+				// evaluate Target position
+				if( reg.sel.contains( event.getTo() ) )
 				{
-					if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-						event.getPlayer().sendMessage( MLog.real( reg.greet ) );
-				}
-				else
-				{
-					if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-						event.getPlayer().sendMessage( MLog.real( reg.greetingOthers ) );
-				}
-				gmbackupa.put( event.getPlayer(), event.getPlayer().getGameMode() );
-				if( reg.gamemode )
-					event.getPlayer().setGameMode( GameMode.CREATIVE );
-				else
-					event.getPlayer().setGameMode( GameMode.SURVIVAL );
+					worldModeValid = true;
+					if( showNotifications )
+					{
+						if( isOwner )
+							player.sendMessage( MLog.real( reg.greet ) );
+						else
+							player.sendMessage( MLog.real( reg.greetingOthers ) );
+					}
 
-			}
-			else if( !reg.sel.contains( event.getTo() ) && reg.sel.contains( event.getFrom() ) )
-			{
-				inRegion = true;
-				if( reg.owner.equalsIgnoreCase( event.getPlayer().getName() ) || reg.owner.equalsIgnoreCase( "noone" ) )
-				{
-					if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-						event.getPlayer().sendMessage( MLog.real( reg.farewell ) );
+					if( !ignoreGamemodeForPlayer )
+						ur.setCreativeMode( player, reg.gamemode );
 				}
 				else
 				{
-					if( reg.showMessages && ur.notifications.get( event.getPlayer().getName() ) )
-						event.getPlayer().sendMessage( MLog.real( reg.farewellOthers ) );
-				}
-				if( gmbackupa.get( event.getPlayer() ) != null )
-				{
-					event.getPlayer().setGameMode( gmbackupa.get( event.getPlayer() ) );
-					gmbackupa.remove( event.getPlayer() );
+					if( showNotifications )
+					{
+						if( isOwner )
+							player.sendMessage( MLog.real( reg.farewell ) );
+						else
+							event.getPlayer().sendMessage( MLog.real( reg.farewellOthers ) );
+					}
+
+					if( !ignoreGamemodeForPlayer )
+						ur.setCreativeMode( player, ur.getWorldGameMode( player ) );
+					worldModeValid = true;
 				}
 			}
 			else if( reg.sel.contains( event.getTo() ) && reg.sel.contains( event.getFrom() ) )
 			{
-				inRegion = true;
+				// Prevent from hacking gamemode while walking on a region
+				if( !ignoreGamemodeForPlayer )
+				{
+					if( player.getGameMode() != ( ( reg.gamemode ) ? GameMode.CREATIVE : GameMode.SURVIVAL ) )
+					{
+						ur.setCreativeMode( player, reg.gamemode );
+					}
+				}
+				worldModeValid = true;
 			}
-
 		}
-		if( !inRegion && !event.getPlayer().hasPermission( "ultraplots.keepgamemode" ) )
+
+		// Check worlds if player is not in any of our regions
+		if( !worldModeValid && !ignoreGamemodeForPlayer )
 		{
-			if( ur != null && ur.global != null && ur.global.gamemode && event.getPlayer().getGameMode() != GameMode.CREATIVE )
-			{
-				event.getPlayer().setGameMode( GameMode.CREATIVE );
-			}
-			else if( !ur.global.gamemode && event.getPlayer().getGameMode() == GameMode.CREATIVE )
-			{
-				event.getPlayer().setGameMode( GameMode.SURVIVAL );
-			}
+			ur.setCreativeMode( player, ur.getWorldGameMode( player ) );
 		}
 	}
 
-	@EventHandler( priority = EventPriority.NORMAL )
-	public void onPlayerQuit( PlayerQuitEvent event )
-	{
-		if( gmbackup.containsKey( event.getPlayer() ) )
-			event.getPlayer().setGameMode( gmbackup.get( event.getPlayer() ) );
-		if( gmbackupa.containsKey( event.getPlayer() ) )
-			event.getPlayer().setGameMode( gmbackupa.get( event.getPlayer() ) );
-	}
-
+	/**
+	 * Handle Player commands before going into bukkit procedures
+	 *
+	 * @param e
+	 */
 	@EventHandler( priority = EventPriority.LOWEST )
 	public void onPlayerCommand( PlayerCommandPreprocessEvent e )
 	{

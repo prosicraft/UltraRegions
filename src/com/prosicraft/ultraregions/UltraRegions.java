@@ -12,8 +12,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -32,19 +34,21 @@ public class UltraRegions extends JavaPlugin
 	private PluginDescriptionFile pdfFile;
 	public URListener thelistener;
 	public WorldEditInterface we;
-	public List<URegion> regions = new ArrayList<>();
-	public List<URegion> autoassign = new ArrayList<>();
-	public Map<String, Boolean> notifications = new HashMap<>();
-	public int claimHeight = 20;
-	public String autoAssignCommand = "givemeaplot";
-	public MConfiguration config = null;
-	private boolean freshconfig = false;
-	public URegion global = null;
+	public List<URegion> regions			= new ArrayList<>();
+	public List<URegion> autoassign			= new ArrayList<>();
+	public List<UWorld> worlds			= new ArrayList<>();
+	public Map<String, Boolean> notifications	= new HashMap<>();
+	public int claimHeight				= 20;
+	public String autoAssignCommand			= "givemeaplot";
+	public MConfiguration config			= null;
+	private boolean freshconfig			= false;
 
+	/**
+	 * Enable this Plugin
+	 */
 	@Override
 	public void onEnable()
 	{
-
 		pdfFile = getDescription();
 
 		getServer().getPluginManager().registerEvents( thelistener = new URListener( this ), this );
@@ -52,7 +56,7 @@ public class UltraRegions extends JavaPlugin
 		we = thelistener.we;
 
 		initConfig();
-		if( freshconfig )
+		if( freshconfig ) // freshconfig will be true when config is empty
 			save();
 		else
 		{
@@ -60,30 +64,73 @@ public class UltraRegions extends JavaPlugin
 			save();
 		}
 
-		global = new URegion( null, "global", false, "", "" );
+		// Load not inited worlds
+		MLog.i( "Load not inited worlds..." );
+		for( World itWorld : getServer().getWorlds() )
+		{
+			boolean foundWorld = false;
+			for( UWorld world : worlds )
+			{
+				if( world.getName().equalsIgnoreCase( itWorld.getName() ) )
+				{
+					foundWorld = true;
+					break;
+				}
+			}
 
+			if( !foundWorld )
+			{
+				UWorld world = new UWorld();
+				world.setName( itWorld.getName() );
+				world.setGameMode( false );
+			}
+		}
+		save();
+
+		// Load notifications
 		for( int i = 0; i < getServer().getOnlinePlayers().length; i++ )
 		{
 			if( !notifications.containsKey( getServer().getOnlinePlayers()[i].getName() ) )
+			{
 				notifications.put( getServer().getOnlinePlayers()[i].getName(), Boolean.TRUE );
+			}
 		}
 
-		tryhook();
+		// Try to Hook into WorldEdit
+		tryHookWorldEdit();
 
+		// Print startup info
 		MLog.i( "Loading version " + pdfFile.getVersion() );
 		MLog.w( "THIS VERSION OF ULTRAREGIONS MIGHT BE BUGGY!" );
+	}
 
+	/**
+	 * Disable this plugin
+	 */
+	@Override
+	public void onDisable()
+	{
+		MLog.i( "Disabled UltraRegions" );
 	}
 
 	public void load()
 	{
-		config.load();
 		int cnt = 0;
+
+		config.load();
 		autoAssignCommand = config.getString( "autoAssignCommand" );
 
 		for( String s : config.getKeys( "notifications" ) )
 		{
 			notifications.put( s, config.getBoolean( "notifications." + s, true ) );
+		}
+
+		for( String s : config.getKeys( "worlds" ) )
+		{
+			UWorld world = new UWorld();
+			world.setName( s );
+			world.setGameMode( config.getBoolean( "worlds." + s + ".gamemode", false ) );
+			world.setDefaultPlotGamemode( config.getBoolean( "worlds." + s + ".defaultPlotGamemode", true ) );
 		}
 
 		for( String s : config.getKeys( "regions" ) )
@@ -99,6 +146,7 @@ public class UltraRegions extends JavaPlugin
 			regions.add( tr );
 			cnt++;
 		}
+
 		for( String s : config.getKeys( "autoassign" ) )
 		{
 			CuboidSelection cs = new CuboidSelection( getServer().getWorld( config.getString( "autoassign." + s + ".world" ) ),
@@ -120,10 +168,18 @@ public class UltraRegions extends JavaPlugin
 		int cnt = 0;
 		config.clear();
 		config.set( "autoAssignCommand", autoAssignCommand );
+
 		for( String s : notifications.keySet() )
 		{
 			config.set( "notifications." + s, notifications.get( s ) );
 		}
+
+		for( UWorld world : worlds )
+		{
+			config.set( "worlds." + world.getName() + ".gamemode", world.getGameModeBoolean() );
+			config.set( "worlds." + world.getName() + ".defaultPlotGamemode", world.getDefaultPlotGamemode() );
+		}
+
 		for( URegion r : regions )
 		{
 			String s = r.name;
@@ -190,12 +246,6 @@ public class UltraRegions extends JavaPlugin
 		MLog.i( "Plots saved" );
 	}
 
-	@Override
-	public void onDisable()
-	{
-		MLog.i( "Disabled UltraRegions" );
-	}
-
 	public void initConfig()
 	{
 
@@ -243,7 +293,7 @@ public class UltraRegions extends JavaPlugin
 			{
 				if( we == null )
 				{
-					tryhook();
+					tryHookWorldEdit();
 				}
 				else
 					MLog.w( "WorldEdited not hooked." );
@@ -312,6 +362,38 @@ public class UltraRegions extends JavaPlugin
 							}
 						}
 						p.sendMessage( ChatColor.RED + "There's no region called '" + args[1] + "'." );
+						return true;
+					}
+					else if( args[0].equalsIgnoreCase( "setworldmode" ) )
+					{
+						if( !p.hasPermission( "ultraregions.changeworldgamemode" ) )
+						{
+							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+							return true;
+						}
+
+						boolean gm;
+						if( args[1].equalsIgnoreCase( "survival" ) )
+							gm = false;
+						else if( args[1].equalsIgnoreCase( "creative" ) )
+							gm = true;
+						else
+						{
+							p.sendMessage( ChatColor.RED + "There is no gamemode '" + args[1] + "'!" );
+							return true;
+						}
+
+						for( UWorld world : worlds )
+						{
+							if( world.getName().equalsIgnoreCase( p.getWorld().getName() ) )
+							{
+								world.setGameMode( gm );
+								save();
+								break;
+							}
+						}
+						p.sendMessage( ChatColor.DARK_GRAY + "Set gamemode of world " + ChatColor.AQUA + p.getWorld().getName() +
+							ChatColor.DARK_GRAY + " to " + ChatColor.GREEN + args[1] );
 						return true;
 					}
 				}
@@ -456,7 +538,7 @@ public class UltraRegions extends JavaPlugin
 			{
 				if( we == null )
 				{
-					tryhook();
+					tryHookWorldEdit();
 				}
 				if( we == null )
 				{
@@ -610,6 +692,7 @@ public class UltraRegions extends JavaPlugin
 					URegion ur = new URegion( we.getRegion( p ), "acregion" + autoassign.size(), true, "&7Du betrittst ein Grundstueck. Es gehoert nicht dir.", "&7Du verlaesst ein Grundstueck." );
 					ur.spawn = p.getLocation();
 					ur.owner = "noone";
+					ur.gamemode = getWorldDefaultPlotGamemode( we.getRegion( p ).getWorld().getName() );
 					this.autoassign.add( ur );
 					p.sendMessage( ChatColor.GREEN + "Das Grundstück wurde definiert." );
 					save();
@@ -724,7 +807,10 @@ public class UltraRegions extends JavaPlugin
 		p.sendMessage( "/plot delete -- delete plot definition" );
 	}
 
-	private void tryhook()
+	/**
+	 * Try to hook into WorldEdit plugin
+	 */
+	private void tryHookWorldEdit()
 	{
 		for( Plugin plug : getServer().getPluginManager().getPlugins() )
 		{
@@ -970,7 +1056,7 @@ public class UltraRegions extends JavaPlugin
 				to.sendMessage( ChatColor.RED + "Du hast bereits ein Grundstueck. Bitte einen Support anfragen wenn du ein Zweites wuenscht." );
 				return true;
 			}
-		}				
+		}
 		for( URegion ur : autoassign )
 		{
 			if( ur.owner.equalsIgnoreCase( "noone" ) )
@@ -986,7 +1072,64 @@ public class UltraRegions extends JavaPlugin
 				save();
 				return true;
 			}
-		}				
+		}
 		return false;
+	}
+
+	/**
+	 * Switches Creative Mode for given player on or off
+	 * @param p the player
+	 * @param state the state (true = on, false = off)
+	 */
+	public void setCreativeMode( Player p, boolean state )
+	{
+		if( p != null )
+		{
+			GameMode gm = (state) ? GameMode.CREATIVE : GameMode.SURVIVAL;
+			if( p.getGameMode() != gm )
+			{
+				p.setGameMode( gm );
+			}
+		}
+	}
+
+	/**
+	 * Gets the world gamemode the player is in
+	 * @param p the player
+	 */
+	public boolean getWorldGameMode( Player p )
+	{
+		String worldName = p.getWorld().getName();
+		for( UWorld itWorld : worlds )
+		{
+			if( itWorld.getName().equalsIgnoreCase( worldName ) )
+			{
+				return itWorld.getGameModeBoolean();
+			}
+		}
+
+		// if we reach this line no world was found matching this name
+		// .. so we gonna add a new one
+		MLog.i( "World '" + worldName + "' the Player '" + p.getName() + "' will be added to memory. New GameMode: SURVIVAL" );
+		UWorld world = new UWorld();
+		world.setName( worldName );
+		world.setGameMode( false );
+		worlds.add( world );
+
+		return world.getGameModeBoolean();
+	}
+
+	/**
+	 * Gets the default plot gamemode of a world
+	 */
+	public boolean getWorldDefaultPlotGamemode( String name )
+	{
+		for( UWorld itWorld : worlds )
+		{
+			if( itWorld.getName().equalsIgnoreCase( name ) )
+				return itWorld.getDefaultPlotGamemode();
+		}
+
+		return true;
 	}
 }
