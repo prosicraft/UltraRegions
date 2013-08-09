@@ -83,6 +83,7 @@ public class UltraRegions extends JavaPlugin
 				UWorld world = new UWorld();
 				world.setName( itWorld.getName() );
 				world.setGameMode( false );
+				worlds.add( world );
 			}
 		}
 		save();
@@ -278,6 +279,13 @@ public class UltraRegions extends JavaPlugin
 
 		config = new MConfiguration( YamlConfiguration.loadConfiguration( cf ), cf );
 
+		// Initialize DataTable
+		Map<String, MConfiguration.DataType> dt = new HashMap<>();
+
+		dt.put( "fail", MConfiguration.DataType.DATATYPE_STRING );
+
+		config.setDataTypeTable( dt );
+
 		config.load();
 
 	}
@@ -325,19 +333,6 @@ public class UltraRegions extends JavaPlugin
 						p.sendMessage( ChatColor.GREEN + "Reloaded UR Configuration!" );
 						return true;
 					}
-					else if( args[0].equalsIgnoreCase( "config") )
-					{
-						if( !p.hasPermission( "ultraregions.config" ) )
-						{
-							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
-							return true;
-						}
-
-						String nodeArg = args[1];
-						p.sendMessage( ChatColor.DARK_GRAY + "Value of node '" + ChatColor.GRAY + nodeArg + ChatColor.DARK_GRAY + "': " + ChatColor.AQUA
-							+ config.getValueAsString( nodeArg ) );
-						return true;
-					}
 				}
 				if( args.length == 2 && args[0].equalsIgnoreCase( "setcommand" ) )
 				{
@@ -349,6 +344,19 @@ public class UltraRegions extends JavaPlugin
 					autoAssignCommand = args[1];
 					p.sendMessage( "Set new autoAssignCommand" );
 					save();
+					return true;
+				}
+				else if( args.length == 2 && args[0].equalsIgnoreCase( "config") )
+				{
+					if( !p.hasPermission( "ultraregions.config" ) )
+					{
+						p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+						return true;
+					}
+
+					String nodeArg = args[1];
+					p.sendMessage( ChatColor.DARK_GRAY + "Value of node '" + ChatColor.GRAY + nodeArg + ChatColor.DARK_GRAY + "': " + ChatColor.AQUA
+						+ config.getValueAsString( nodeArg ) );
 					return true;
 				}
 				if( args.length == 2 )
@@ -423,47 +431,79 @@ public class UltraRegions extends JavaPlugin
 							ChatColor.DARK_GRAY + " to " + ChatColor.GREEN + args[1] );
 						return true;
 					}
-					else if( args[0].equalsIgnoreCase( "config" ) )
+					else if( args[0].equalsIgnoreCase( "setworldglobalbuild" ) )
 					{
-						if( !p.hasPermission( "ultraregions.config" ) )
+						if( !p.hasPermission( "ultraregions.changeworldglobalbuild" ) )
 						{
 							p.sendMessage( ChatColor.RED + "Er... what's this command?" );
 							return true;
 						}
 
-						String nodeArg = args[0];
-						String valueArg = args[1];
+						boolean val;
+						if( args[1].equalsIgnoreCase( "true" ) )
+							val = true;
+						else if( args[1].equalsIgnoreCase( "false" ) )
+							val = false;
+						else
+						{
+							p.sendMessage( ChatColor.RED + "Possible values: false, true" );
+							return true;
+						}
 
-						try
+						for( UWorld world : worlds )
 						{
-							int val = Integer.parseInt( valueArg );
-							config.set( nodeArg, val );
-							config.save();
-							p.sendMessage( "Set digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
-						}
-						catch( NumberFormatException ex )
-						{
-							if( valueArg.equalsIgnoreCase( "false" ) )
+							if( world.getName().equalsIgnoreCase( p.getWorld().getName() ) )
 							{
-								config.set( nodeArg, false );
-								config.save();
-								p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
-							}
-							else if( valueArg.equalsIgnoreCase( "true" ) )
-							{
-								config.set( nodeArg, true );
-								config.save();
-								p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
-							}
-							else
-							{
-								config.set( nodeArg, valueArg );
-								config.save();
-								p.sendMessage( "Set non-digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+								world.setGlobalBuild( val );
+								break;
 							}
 						}
+						save();
+						p.sendMessage( ChatColor.DARK_GRAY + "Set globalBuild of world " + ChatColor.AQUA + p.getWorld().getName() +
+							ChatColor.DARK_GRAY + " to " + ChatColor.GREEN + args[1] );
 						return true;
 					}
+				}
+				else if( args.length == 3 && args[0].equalsIgnoreCase( "config" ) )
+				{
+					if( !p.hasPermission( "ultraregions.config" ) )
+					{
+						p.sendMessage( ChatColor.RED + "Er... what's this command?" );
+						return true;
+					}
+
+					String nodeArg = args[0];
+					String valueArg = args[1];
+
+					try
+					{
+						int val = Integer.parseInt( valueArg );
+						config.set( nodeArg, val );
+						config.save();
+						p.sendMessage( "Set digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+					}
+					catch( NumberFormatException ex )
+					{
+						if( valueArg.equalsIgnoreCase( "false" ) )
+						{
+							config.set( nodeArg, false );
+							config.save();
+							p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+						}
+						else if( valueArg.equalsIgnoreCase( "true" ) )
+						{
+							config.set( nodeArg, true );
+							config.save();
+							p.sendMessage( "Set boolean value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+						}
+						else
+						{
+							config.set( nodeArg, valueArg );
+							config.save();
+							p.sendMessage( "Set non-digit value " + ChatColor.AQUA + valueArg + ChatColor.GREEN + " for node " + ChatColor.AQUA + nodeArg + ChatColor.GREEN + "." );
+						}
+					}
+					return true;
 				}
 				else if( args.length == 3 && args[0].equalsIgnoreCase( "gamemode" ) )
 				{
@@ -1183,6 +1223,7 @@ public class UltraRegions extends JavaPlugin
 		world.setName( worldName );
 		world.setGameMode( false );
 		worlds.add( world );
+		save();
 
 		return world.getGameModeBoolean();
 	}
