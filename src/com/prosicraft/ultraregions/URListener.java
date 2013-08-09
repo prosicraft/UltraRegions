@@ -319,7 +319,7 @@ public class URListener implements Listener
 			event.getPlayer().setGameMode( gmbackupa.get( event.getPlayer() ) );
 	}
 
-	@EventHandler( priority = EventPriority.HIGHEST )
+	@EventHandler( priority = EventPriority.LOWEST )
 	public void onPlayerCommand( PlayerCommandPreprocessEvent e )
 	{
 		if( e.isCancelled() )
