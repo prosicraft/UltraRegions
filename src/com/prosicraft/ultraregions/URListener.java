@@ -113,7 +113,7 @@ public class URListener implements Listener
 		}
 		if( !blockInRegion )
 		{
-			if( !p.hasPermission( "ultraregions.build.everywhere" ) )
+			if( !p.hasPermission( "ultraregions.build.everywhere" ) && !ur.getWorldGlobalBuildEnabled( p.getWorld().getName() ) )
 				return false;
 		}
 

@@ -131,6 +131,7 @@ public class UltraRegions extends JavaPlugin
 			world.setName( s );
 			world.setGameMode( config.getBoolean( "worlds." + s + ".gamemode", false ) );
 			world.setDefaultPlotGamemode( config.getBoolean( "worlds." + s + ".defaultPlotGamemode", true ) );
+			world.setGlobalBuild( config.getBoolean( "worlds." + s + ".enableGlobalBuild", false ) );
 		}
 
 		for( String s : config.getKeys( "regions" ) )
@@ -178,6 +179,7 @@ public class UltraRegions extends JavaPlugin
 		{
 			config.set( "worlds." + world.getName() + ".gamemode", world.getGameModeBoolean() );
 			config.set( "worlds." + world.getName() + ".defaultPlotGamemode", world.getDefaultPlotGamemode() );
+			config.set( "worlds." + world.getName() + ".enableGlobalBuild", world.isGlobalBuild() );
 		}
 
 		for( URegion r : regions )
@@ -1120,7 +1122,9 @@ public class UltraRegions extends JavaPlugin
 	}
 
 	/**
-	 * Gets the default plot gamemode of a world
+	 * Gets the default plot gamemode
+	 * @param name worldname
+	 * @return true = creative, false = survival
 	 */
 	public boolean getWorldDefaultPlotGamemode( String name )
 	{
@@ -1131,5 +1135,20 @@ public class UltraRegions extends JavaPlugin
 		}
 
 		return true;
+	}
+
+	/**
+	 * Get whether global build is enabled for this wolrd
+	 * @param name Worldname
+	 * @return true if global build is enabled, false if not
+	 */
+	public boolean getWorldGlobalBuildEnabled( String name )
+	{
+		for( UWorld itWorld : worlds )
+		{
+			if( itWorld.getName().equalsIgnoreCase( name ) )
+				return itWorld.isGlobalBuild();
+		}
+		return false;
 	}
 }
