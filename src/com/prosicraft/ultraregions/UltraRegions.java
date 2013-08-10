@@ -132,6 +132,7 @@ public class UltraRegions extends JavaPlugin
 			world.setDefaultPlotGamemode( config.getBoolean( "worlds." + s + ".defaultPlotGamemode", true ) );
 			world.setGlobalBuild( config.getBoolean( "worlds." + s + ".enableGlobalBuild", false ) );
                         world.autoAssignCommand = config.getString( "worlds." + s + ".autoAssignCommand", "givemeaplot" );
+			worlds.add( world );
 		}
 
 		for( String s : config.getKeys( "regions" ) )
