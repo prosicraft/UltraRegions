@@ -8,103 +8,119 @@ import org.bukkit.GameMode;
 /**
  *
  * @author kaipower
+ * @edited by prosicraft
  */
 public class UWorld
 {
-    /**
-     * World name
-     */
-    public String name = "";
 
-    /**
-     * Gamemode of this world
-     * true = creative, false = survival
-     */
-    public boolean gamemode = false;
+	/**
+	 * World name
+	 */
+	public String name = "";
 
-    /**
-     * Default plot gamemode
-     * true = creative, false = survival
-     */
-    public boolean defaultPlotGamemode = true;
+	/**
+	 * Gamemode of this world true = creative, false = survival
+	 */
+	public boolean gamemode = false;
 
-    /**
-     * enable global build
-     */
-    public boolean enableGlobalBuild = false;
+	/**
+	 * Default plot gamemode true = creative, false = survival
+	 */
+	public boolean defaultPlotGamemode = true;
 
-    /**
-     * AutoAssign command for this world
-     */
-    public String autoAssignCommand = "givemeaplot";
+	/**
+	 * enable global build
+	 */
+	public boolean enableGlobalBuild = false;
 
-    /**
-     * Get default plot gamemode
-     * @return
-     */
-    public boolean getDefaultPlotGamemode() {
-        return defaultPlotGamemode;
-    }
+	/**
+	 * AutoAssign command for this world
+	 */
+	public String autoAssignCommand = "givemeaplot";
 
-    /**
-     * Set the default plot gamemode
-     * @param defaultPlotGamemode
-     */
-    public void setDefaultPlotGamemode(boolean defaultPlotGamemode) {
-        this.defaultPlotGamemode = defaultPlotGamemode;
-    }
+	/**
+	 * Get default plot gamemode
+	 *
+	 * @return
+	 */
+	public boolean getDefaultPlotGamemode()
+	{
+		return defaultPlotGamemode;
+	}
 
-    /**
-     * Get World gamemode
-     * @return
-     */
-    public boolean getGameModeBoolean() {
-        return gamemode;
-    }
+	/**
+	 * Set the default plot gamemode
+	 *
+	 * @param defaultPlotGamemode
+	 */
+	public void setDefaultPlotGamemode( boolean defaultPlotGamemode )
+	{
+		this.defaultPlotGamemode = defaultPlotGamemode;
+	}
 
-    /**
-     * Get World gamemode as GameMode
-     */
-    public GameMode getGameMode() {
-        return (gamemode) ? GameMode.CREATIVE : GameMode.SURVIVAL;
-    }
+	/**
+	 * Get World gamemode
+	 *
+	 * @return
+	 */
+	public boolean getGameModeBoolean()
+	{
+		return gamemode;
+	}
 
-    /**
-     * Set the world gamemode
-     * @param gamemode
-     */
-    public void setGameMode(boolean gamemode) {
-        this.gamemode = gamemode;
-    }
+	/**
+	 * Get World gamemode as GameMode
+	 */
+	public GameMode getGameMode()
+	{
+		return ( gamemode ) ? GameMode.CREATIVE : GameMode.SURVIVAL;
+	}
 
-    /**
-     * Check whether global build is enabled or not
-     * @return
-     */
-    public boolean isGlobalBuild() {
-        return enableGlobalBuild;
-    }
+	/**
+	 * Set the world gamemode
+	 *
+	 * @param gamemode
+	 */
+	public void setGameMode( boolean gamemode )
+	{
+		this.gamemode = gamemode;
+	}
 
-    /**
-     * Enable global build or not
-     * @param enableGlobalBuild
-     */
-    public void setGlobalBuild(boolean enableGlobalBuild) {
-        this.enableGlobalBuild = enableGlobalBuild;
-    }
+	/**
+	 * Check whether global build is enabled or not
+	 *
+	 * @return
+	 */
+	public boolean isGlobalBuild()
+	{
+		return enableGlobalBuild;
+	}
 
-    /**
-     * Set the world name
-     * @param name
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
+	/**
+	 * Enable global build or not
+	 *
+	 * @param enableGlobalBuild
+	 */
+	public void setGlobalBuild( boolean enableGlobalBuild )
+	{
+		this.enableGlobalBuild = enableGlobalBuild;
+	}
 
-    /**
-     * Get the world name
-     */
-    public String getName() {
-        return this.name;
-    }
+	/**
+	 * Set the world name
+	 *
+	 * @param name
+	 */
+	public void setName( String name )
+	{
+		this.name = name;
+	}
+
+	/**
+	 * Get the world name
+	 */
+	public String getName()
+	{
+		return this.name;
+	}
 }
