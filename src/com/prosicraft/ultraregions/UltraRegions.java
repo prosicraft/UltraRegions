@@ -1175,17 +1175,20 @@ public class UltraRegions extends JavaPlugin
 
 	public boolean assignPlot( Player to )
 	{
+		// Check if player already has a plot in this world.
 		for( URegion tr : autoassign )
 		{
 			if( tr.owner.equalsIgnoreCase( to.getName() ) && tr.sel.getWorld().getName().equalsIgnoreCase( to.getWorld().getName() ) )
 			{
-				to.sendMessage( ChatColor.RED + "Du hast bereits ein Grundstueck. Bitte einen Support anfragen wenn du ein Zweites wuenscht." );
+				to.sendMessage( ChatColor.RED + "Du hast bereits ein Grundstueck. Bitte einen Supporter anfragen wenn du ein Zweites wuenscht." );
 				return true;
 			}
 		}
+
+		// Now find empty plot and assign it
 		for( URegion ur : autoassign )
 		{
-			if( ur.owner.equalsIgnoreCase( "noone" ) )
+			if( ur.owner.equalsIgnoreCase( "noone" ) && ur.sel.getWorld().getName().equalsIgnoreCase( to.getWorld().getName() ) )
 			{
 				ur.owner = to.getName();
 				to.teleport( ur.spawn );
