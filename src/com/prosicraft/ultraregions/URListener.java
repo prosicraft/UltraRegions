@@ -20,7 +20,6 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -365,7 +364,26 @@ public class URListener implements Listener
 	{
 		if( e.isCancelled() )
 			return;
-		if( e.getMessage().substring( 1 ).equalsIgnoreCase( this.ur.autoAssignCommand ) )
+
+                String worldName = e.getPlayer().getWorld().getName();
+                String assignCommand = "";
+
+                for( UWorld world : ur.worlds )
+                {
+                    if( world.name.equalsIgnoreCase( worldName ) )
+                    {
+                        assignCommand = world.autoAssignCommand;
+                        break;
+                    }
+                }
+
+                if( assignCommand.equalsIgnoreCase( "" ) )
+                {
+                    MLog.e( "Cannot find world '" + worldName + "' the player '"+ e.getPlayer().getName() + "' is in." );
+                    return;
+                }
+
+		if( e.getMessage().substring( 1 ).equalsIgnoreCase( assignCommand ) )
 		{
 			MLog.i( "Auto assigning Plot to player '" + e.getPlayer().getName() + "'" );
 			ur.assignPlot( e.getPlayer() );

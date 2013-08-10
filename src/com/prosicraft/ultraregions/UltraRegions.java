@@ -39,7 +39,6 @@ public class UltraRegions extends JavaPlugin
 	public List<UWorld> worlds			= new ArrayList<>();
 	public Map<String, Boolean> notifications	= new HashMap<>();
 	public int claimHeight				= 20;
-	public String autoAssignCommand			= "givemeaplot";
 	public MConfiguration config			= null;
 	private boolean freshconfig			= false;
 
@@ -119,7 +118,6 @@ public class UltraRegions extends JavaPlugin
 		int cnt = 0;
 
 		config.load();
-		autoAssignCommand = config.getString( "autoAssignCommand" );
 
 		for( String s : config.getKeys( "notifications" ) )
 		{
@@ -133,6 +131,7 @@ public class UltraRegions extends JavaPlugin
 			world.setGameMode( config.getBoolean( "worlds." + s + ".gamemode", false ) );
 			world.setDefaultPlotGamemode( config.getBoolean( "worlds." + s + ".defaultPlotGamemode", true ) );
 			world.setGlobalBuild( config.getBoolean( "worlds." + s + ".enableGlobalBuild", false ) );
+                        world.autoAssignCommand = config.getString( "worlds." + s + ".autoAssignCommand", "givemeaplot" );
 		}
 
 		for( String s : config.getKeys( "regions" ) )
@@ -169,7 +168,6 @@ public class UltraRegions extends JavaPlugin
 	{
 		int cnt = 0;
 		config.clear();
-		config.set( "autoAssignCommand", autoAssignCommand );
 
 		for( String s : notifications.keySet() )
 		{
@@ -181,6 +179,7 @@ public class UltraRegions extends JavaPlugin
 			config.set( "worlds." + world.getName() + ".gamemode", world.getGameModeBoolean() );
 			config.set( "worlds." + world.getName() + ".defaultPlotGamemode", world.getDefaultPlotGamemode() );
 			config.set( "worlds." + world.getName() + ".enableGlobalBuild", world.isGlobalBuild() );
+                        config.set( "worlds." + world.getName() + ".autoAssignCommand", world.autoAssignCommand );
 		}
 
 		for( URegion r : regions )
@@ -341,8 +340,27 @@ public class UltraRegions extends JavaPlugin
 						p.sendMessage( ChatColor.RED + "Er... what's this command?" );
 						return true;
 					}
-					autoAssignCommand = args[1];
-					p.sendMessage( "Set new autoAssignCommand" );
+
+                                        boolean foundWorld = false;
+                                        String worldName = p.getWorld().getName();
+                                        for( UWorld world : worlds )
+                                        {
+                                            if( world.name.equalsIgnoreCase( worldName ) )
+                                            {
+                                                world.autoAssignCommand = args[1];
+                                                foundWorld = true;
+                                                break;
+                                            }
+                                        }
+
+                                        if( !foundWorld )
+                                        {
+                                            p.sendMessage( ChatColor.RED + "Worlds havent been loaded properly!" );
+                                            return true;
+                                        }
+                                        save();
+
+					p.sendMessage( "Set new autoAssignCommand for world " + worldName );
 					save();
 					return true;
 				}
