@@ -124,6 +124,8 @@ public class UltraRegions extends JavaPlugin
 			notifications.put( s, config.getBoolean( "notifications." + s, true ) );
 		}
 
+		worlds.clear();
+
 		for( String s : config.getKeys( "worlds" ) )
 		{
 			UWorld world = new UWorld();
