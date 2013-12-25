@@ -197,6 +197,16 @@ public class URListener implements Listener
 				e.setCancelled( true );
 		}
 	}
+	
+	@EventHandler( priority = EventPriority.LOWEST )
+	public void onPlayerInteractEntity( PlayerInteractEntityEvent e )
+	{
+		if( e.getRightClicked().getType() == EntityType.ITEM_FRAME )
+		{
+			if( !isPermitted( ( Player ) e.getPlayer(), e.getRightClicked().getLocation() ) )
+				e.setCancelled( true );
+		}
+	}
 
 	@EventHandler( priority = EventPriority.LOW )
 	public void onPlayerJoin( PlayerJoinEvent event )
